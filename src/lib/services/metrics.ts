@@ -4,6 +4,7 @@ import type { IncidentioIncident, IncidentTimestamp } from './incidentio';
 export interface CalculatedMetrics {
   mtta: number; // Mean Time To Acknowledge (minutes)
   mttr: number; // Mean Time To Resolution (minutes)
+  mttd: number; // Mean Time To Detect (minutes)
   incidentCount: number;
   severityBreakdown: Record<string, number>;
   statusBreakdown: Record<string, number>;
@@ -11,6 +12,7 @@ export interface CalculatedMetrics {
   trends: {
     mtta: number; // percentage change
     mttr: number; // percentage change
+    mttd: number; // percentage change
     incidentCount: number; // percentage change
   };
 }
@@ -24,7 +26,7 @@ export interface MetricsTimeframe {
   };
 }
 
-// Default timeframes
+// Default timeframes - using past 3 months as primary dataset
 export const TIMEFRAMES = {
   '7d': {
     start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -52,19 +54,57 @@ export const TIMEFRAMES = {
   }
 };
 
-export function calculateMTTA(incidents: IncidentioIncident[]): number {
-  const acknowledgeTimes: number[] = [];
+// Your specific business requirements
+export const BUSINESS_RULES = {
+  P1_SEVERITY_ID: '01JCK46RNJXWNMAATAEGSDDB45',
+  TARGET_PRODUCTS: ['Commerce', 'POS', 'Inventory & Labor', 'Coach'],
+  DURATION_METRIC_IDS: {
+    TIME_TO_ACKNOWLEDGE: '01JCP0MSY172KGDX0J6AGAHEDY',
+    TIME_TO_DETECT: '01JCRT5C9DD7J0SH5B2BSRRQEF',
+    INCIDENT_DURATION: '01JCK46RNJ3Y3HSDE6PTV4KKNM'
+  },
+  PRODUCT_FIELD_ID: '01JCKXJWGP9T6PJKSMMH6XKEGC'
+};
 
-  incidents.forEach(incident => {
-    const createdTime = new Date(incident.created_at).getTime();
-    const acknowledgeTimestamp = incident.timestamps.find(t => 
-      t.name === 'acknowledged' || t.name === 'investigating'
+// Filter incidents based on your business rules
+export function filterIncidentsForMetrics(incidents: IncidentioIncident[]): IncidentioIncident[] {
+  return incidents.filter(incident => {
+    // Only P1 incidents
+    if (incident.severity.id !== BUSINESS_RULES.P1_SEVERITY_ID) {
+      return false;
+    }
+
+    // Only target products (Commerce, POS, Inventory & Labor, Coach)
+    const productField = incident.custom_field_entries?.find(
+      field => field.custom_field.id === BUSINESS_RULES.PRODUCT_FIELD_ID
+    );
+    
+    if (!productField || !productField.values || productField.values.length === 0) {
+      return false;
+    }
+
+    const hasTargetProduct = productField.values.some(value => 
+      value.value_catalog_entry && 
+      BUSINESS_RULES.TARGET_PRODUCTS.includes(value.value_catalog_entry.name)
     );
 
-    if (acknowledgeTimestamp) {
-      const acknowledgeTime = new Date(acknowledgeTimestamp.occurred_at).getTime();
-      const diffMinutes = (acknowledgeTime - createdTime) / (1000 * 60);
-      acknowledgeTimes.push(diffMinutes);
+    return hasTargetProduct;
+  });
+}
+
+export function calculateMTTA(incidents: IncidentioIncident[]): number {
+  const filteredIncidents = filterIncidentsForMetrics(incidents);
+  const acknowledgeTimes: number[] = [];
+
+  filteredIncidents.forEach(incident => {
+    // Look for "Time to acknowledge" duration metric
+    const ttaMetric = incident.duration_metrics?.find(
+      metric => metric.duration_metric.id === BUSINESS_RULES.DURATION_METRIC_IDS.TIME_TO_ACKNOWLEDGE
+    );
+
+    if (ttaMetric && ttaMetric.value_seconds) {
+      const minutes = ttaMetric.value_seconds / 60;
+      acknowledgeTimes.push(minutes);
     }
   });
 
@@ -75,18 +115,18 @@ export function calculateMTTA(incidents: IncidentioIncident[]): number {
 }
 
 export function calculateMTTR(incidents: IncidentioIncident[]): number {
+  const filteredIncidents = filterIncidentsForMetrics(incidents);
   const resolutionTimes: number[] = [];
 
-  incidents.forEach(incident => {
-    const createdTime = new Date(incident.created_at).getTime();
-    const resolvedTimestamp = incident.timestamps.find(t => 
-      t.name === 'resolved' || t.name === 'closed'
+  filteredIncidents.forEach(incident => {
+    // Look for "Incident duration" duration metric (MTTR)
+    const mttrMetric = incident.duration_metrics?.find(
+      metric => metric.duration_metric.id === BUSINESS_RULES.DURATION_METRIC_IDS.INCIDENT_DURATION
     );
 
-    if (resolvedTimestamp) {
-      const resolvedTime = new Date(resolvedTimestamp.occurred_at).getTime();
-      const diffMinutes = (resolvedTime - createdTime) / (1000 * 60);
-      resolutionTimes.push(diffMinutes);
+    if (mttrMetric && mttrMetric.value_seconds) {
+      const minutes = mttrMetric.value_seconds / 60;
+      resolutionTimes.push(minutes);
     }
   });
 
@@ -96,10 +136,38 @@ export function calculateMTTR(incidents: IncidentioIncident[]): number {
   return Math.round(sum / resolutionTimes.length * 100) / 100;
 }
 
+export function calculateMTTD(incidents: IncidentioIncident[]): number {
+  const filteredIncidents = filterIncidentsForMetrics(incidents);
+  const detectionTimes: number[] = [];
+
+  filteredIncidents.forEach(incident => {
+    // Look for "Time to detect" duration metric
+    const ttdMetric = incident.duration_metrics?.find(
+      metric => metric.duration_metric.id === BUSINESS_RULES.DURATION_METRIC_IDS.TIME_TO_DETECT
+    );
+
+    if (ttdMetric && ttdMetric.value_seconds) {
+      const minutes = ttdMetric.value_seconds / 60;
+      detectionTimes.push(minutes);
+    }
+  });
+
+  if (detectionTimes.length === 0) return 0;
+  
+  const sum = detectionTimes.reduce((acc, time) => acc + time, 0);
+  return Math.round(sum / detectionTimes.length * 100) / 100;
+}
+
+export function calculateIncidentCount(incidents: IncidentioIncident[]): number {
+  const filteredIncidents = filterIncidentsForMetrics(incidents);
+  return filteredIncidents.length;
+}
+
 export function calculateSeverityBreakdown(incidents: IncidentioIncident[]): Record<string, number> {
+  const filteredIncidents = filterIncidentsForMetrics(incidents);
   const breakdown: Record<string, number> = {};
   
-  incidents.forEach(incident => {
+  filteredIncidents.forEach(incident => {
     const severity = incident.severity.name;
     breakdown[severity] = (breakdown[severity] || 0) + 1;
   });
@@ -151,7 +219,8 @@ export function calculateMetrics(
 ): CalculatedMetrics {
   const mtta = calculateMTTA(incidents);
   const mttr = calculateMTTR(incidents);
-  const incidentCount = incidents.length;
+  const mttd = calculateMTTD(incidents);
+  const incidentCount = calculateIncidentCount(incidents);
   const severityBreakdown = calculateSeverityBreakdown(incidents);
   const statusBreakdown = calculateStatusBreakdown(incidents);
   const uptime = calculateUptime(incidents, timeframe);
@@ -159,17 +228,20 @@ export function calculateMetrics(
   // Calculate trends if we have previous data
   const previousMTTA = calculateMTTA(previousIncidents);
   const previousMTTR = calculateMTTR(previousIncidents);
-  const previousIncidentCount = previousIncidents.length;
+  const previousMTTD = calculateMTTD(previousIncidents);
+  const previousIncidentCount = calculateIncidentCount(previousIncidents);
 
   const trends = {
     mtta: calculateTrends(mtta, previousMTTA),
     mttr: calculateTrends(mttr, previousMTTR),
+    mttd: calculateTrends(mttd, previousMTTD),
     incidentCount: calculateTrends(incidentCount, previousIncidentCount),
   };
 
   return {
     mtta,
     mttr,
+    mttd,
     incidentCount,
     severityBreakdown,
     statusBreakdown,

@@ -17,13 +17,13 @@ export interface DashboardData {
       trendValue: string;
       subtitle: string;
     };
-    incidentCount: {
+    mttd: {
       value: string;
       trend: 'up' | 'down' | 'stable';
       trendValue: string;
       subtitle: string;
     };
-    coverage: {
+    incidentCount: {
       value: string;
       trend: 'up' | 'down' | 'stable';
       trendValue: string;
@@ -47,7 +47,7 @@ let lastFetchTime: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export async function fetchDashboardData(
-  timeframe: keyof typeof TIMEFRAMES = '30d',
+  timeframe: keyof typeof TIMEFRAMES = '90d',
   forceRefresh: boolean = false
 ): Promise<DashboardData> {
   // Return cached data if available and not expired
@@ -64,7 +64,7 @@ export async function fetchDashboardData(
     const client = getIncidentioClient();
     const timeframeConfig = TIMEFRAMES[timeframe];
     
-    // Fetch current period incidents
+    // Fetch current period incidents (past 3 months)
     const currentIncidents = await client.getIncidents({
       after: timeframeConfig.start.toISOString(),
       before: timeframeConfig.end.toISOString(),
@@ -120,25 +120,25 @@ export async function fetchDashboardData(
           value: formatMetric(metrics.mtta, 'time'),
           trend: getTrendDirection(metrics.trends.mtta),
           trendValue: formatMetric(Math.abs(metrics.trends.mtta), 'trend'),
-          subtitle: 'Mean Time To Acknowledge'
+          subtitle: 'Mean Time To Acknowledge (P1 Only)'
         },
         mttr: {
           value: formatMetric(metrics.mttr, 'time'),
           trend: getTrendDirection(metrics.trends.mttr),
           trendValue: formatMetric(Math.abs(metrics.trends.mttr), 'trend'),
-          subtitle: 'Mean Time To Resolution'
+          subtitle: 'Mean Time To Resolution (P1 Only)'
+        },
+        mttd: {
+          value: formatMetric(metrics.mttd, 'time'),
+          trend: getTrendDirection(metrics.trends.mttd),
+          trendValue: formatMetric(Math.abs(metrics.trends.mttd), 'trend'),
+          subtitle: 'Mean Time To Detect (P1 Only)'
         },
         incidentCount: {
           value: formatMetric(metrics.incidentCount, 'count'),
           trend: getTrendDirection(metrics.trends.incidentCount),
           trendValue: formatMetric(Math.abs(metrics.trends.incidentCount), 'trend'),
-          subtitle: `Total Incidents (${timeframe.toUpperCase()})`
-        },
-        coverage: {
-          value: '99.9%', // This could be calculated from your monitoring system
-          trend: 'stable',
-          trendValue: '0.0%',
-          subtitle: 'Global Infrastructure Coverage'
+          subtitle: `P1 Incidents (${timeframe.toUpperCase()})`
         },
         uptime: {
           value: formatMetric(metrics.uptime, 'percentage'),
@@ -178,25 +178,25 @@ function getFallbackData(): DashboardData {
         value: '4.2 min',
         trend: 'down',
         trendValue: '12%',
-        subtitle: 'Mean Time To Acknowledge'
+        subtitle: 'Mean Time To Acknowledge (P1 Only)'
       },
       mttr: {
         value: '18.7 min',
         trend: 'down',
         trendValue: '8%',
-        subtitle: 'Mean Time To Resolution'
+        subtitle: 'Mean Time To Resolution (P1 Only)'
+      },
+      mttd: {
+        value: '2.1 min',
+        trend: 'up',
+        trendValue: '5%',
+        subtitle: 'Mean Time To Detect (P1 Only)'
       },
       incidentCount: {
-        value: '247',
+        value: '12',
         trend: 'down',
         trendValue: '15%',
-        subtitle: 'Total Incidents This Month'
-      },
-      coverage: {
-        value: '99.8%',
-        trend: 'up',
-        trendValue: '0.2%',
-        subtitle: 'Global Infrastructure Coverage'
+        subtitle: 'P1 Incidents (3 Months)'
       },
       uptime: {
         value: '99.97%',
@@ -212,7 +212,7 @@ function getFallbackData(): DashboardData {
 }
 
 // Manual refresh function
-export function refreshDashboard(timeframe: keyof typeof TIMEFRAMES = '30d'): Promise<DashboardData> {
+export function refreshDashboard(timeframe: keyof typeof TIMEFRAMES = '90d'): Promise<DashboardData> {
   return fetchDashboardData(timeframe, true);
 }
 
