@@ -12,11 +12,11 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --plugin-search-dir . --check . && eslint .",
 		"format": "prettier --plugin-search-dir . --write .",
-		"deploy": "npm run build && wrangler pages deploy .svelte-kit/output/client --project-name=hub"
+		"deploy": "wrangler pages deploy .svelte-kit/output/client"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-cloudflare": "^4.0.0",
-		"wrangler": "^3.0.0",
+		"wrangler": "^4.0.0",
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/typography": "^0.5.10",
