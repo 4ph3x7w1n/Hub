@@ -9,11 +9,17 @@
   import ContentManager from '$lib/components/ContentManager.svelte';
   import { kpiData, chartData, features, postmortemData, capabilities, teamStats } from '$lib/data/mockData';
   import { contentStore } from '$lib/stores/content';
+  import { fetchDashboardData, refreshDashboard } from '$lib/services/dashboard';
+  import { initializeIncidentIo } from '$lib/env';
   import { onMount } from 'svelte';
   
   let scrollY = 0;
   let dynamicKpiData = kpiData;
   let dynamicTeamStats = teamStats;
+  let isLoadingRealData = false;
+  let lastUpdated = '';
+  let apiStatus: 'healthy' | 'error' | 'checking' = 'checking';
+  let useRealData = false;
   
   // Postmortem filtering
   let filteredPostmortems = postmortemData;
@@ -125,11 +131,50 @@
     return hours * 60 + minutes;
   }
   
-  onMount(() => {
+  // Function to load real incident.io data
+  async function loadRealData() {
+    if (isLoadingRealData) return;
+    
+    isLoadingRealData = true;
+    try {
+      const dashboardData = await fetchDashboardData('30d');
+      dynamicKpiData = dashboardData.kpiData;
+      lastUpdated = dashboardData.lastUpdated;
+      apiStatus = dashboardData.apiStatus;
+      useRealData = dashboardData.isLive;
+      
+      console.log('✅ Real incident.io data loaded successfully');
+    } catch (error) {
+      console.error('❌ Failed to load real data:', error);
+      apiStatus = 'error';
+    } finally {
+      isLoadingRealData = false;
+    }
+  }
+  
+  // Function to refresh data
+  async function handleRefresh() {
+    await loadRealData();
+  }
+  
+  onMount(async () => {
     const handleScroll = () => scrollY = window.scrollY;
     window.addEventListener('scroll', handleScroll);
     contentStore.load(); // Load saved content
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Initialize incident.io integration
+    initializeIncidentIo();
+    
+    // Load real data after a short delay to ensure client is initialized
+    setTimeout(loadRealData, 1000);
+    
+    // Set up periodic refresh (every 5 minutes)
+    const refreshInterval = setInterval(loadRealData, 5 * 60 * 1000);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearInterval(refreshInterval);
+    };
   });
 </script>
 
@@ -223,6 +268,37 @@
     <p class="text-xl text-gray-300 max-w-3xl mx-auto">
       Real-time performance indicators showcasing our commitment to rapid response and system reliability.
     </p>
+    
+    <!-- Data Status Indicator -->
+    <div class="mt-6 flex justify-center items-center space-x-4">
+      <div class="flex items-center space-x-2">
+        <div class="w-3 h-3 rounded-full {apiStatus === 'healthy' ? 'bg-green-500 animate-pulse' : apiStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'}"></div>
+        <span class="text-sm text-gray-400">
+          {#if useRealData}
+            <span class="text-green-400">Live incident.io data</span>
+          {:else if apiStatus === 'error'}
+            <span class="text-red-400">Using fallback data</span>
+          {:else}
+            <span class="text-yellow-400">Connecting...</span>
+          {/if}
+        </span>
+      </div>
+      
+      {#if lastUpdated}
+        <div class="text-xs text-gray-500">
+          Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+        </div>
+      {/if}
+      
+      <button 
+        on:click={handleRefresh}
+        disabled={isLoadingRealData}
+        class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 disabled:opacity-50"
+        title="Refresh data"
+      >
+        {#if isLoadingRealData}⟳{:else}🔄{/if}
+      </button>
+    </div>
   </div>
   
   <!-- KPI Cards -->
