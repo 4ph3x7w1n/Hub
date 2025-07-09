@@ -1,13 +1,13 @@
-name = "byte-incident-management"
-main = ".svelte-kit/output/server/index.js"
+name = "hub"
+main = ".svelte-kit/cloudflare/index.js"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 [site]
-bucket = ".svelte-kit/output/client"
+bucket = ".svelte-kit/cloudflare"
 
 [env.production]
-name = "byte-incident-management"
+name = "hub"
 
-[env.staging]
-name = "byte-incident-management-staging"
+[env.staging]  
+name = "hub-staging"

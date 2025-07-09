@@ -7,9 +7,9 @@ const config = {
 
 	kit: {
 		adapter: adapter({
-			// Use Workers runtime, not Pages
-			platformProxy: {
-				persist: false
+			routes: {
+				include: ['/*'],
+				exclude: ['<all>']
 			}
 		})
 	}
