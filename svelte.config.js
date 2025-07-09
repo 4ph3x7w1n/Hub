@@ -6,7 +6,12 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		adapter: adapter()
+		adapter: adapter({
+			// Use Workers runtime, not Pages
+			platformProxy: {
+				persist: false
+			}
+		})
 	}
 };
 
