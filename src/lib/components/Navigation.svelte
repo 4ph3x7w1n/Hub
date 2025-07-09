@@ -3,6 +3,7 @@
   
   let activeSection = 'hero';
   let isScrolled = false;
+  let mobileMenuOpen = false;
   
   const sections = [
     { id: 'hero', label: 'Home' },
@@ -18,7 +19,16 @@
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
+      mobileMenuOpen = false; // Close mobile menu after navigation
     }
+  }
+  
+  function toggleMobileMenu() {
+    mobileMenuOpen = !mobileMenuOpen;
+  }
+  
+  function closeMobileMenu() {
+    mobileMenuOpen = false;
   }
   
   onMount(() => {
@@ -39,8 +49,19 @@
       }
     };
     
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        closeMobileMenu();
+      }
+    };
+    
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    document.addEventListener('keydown', handleEscape);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('keydown', handleEscape);
+    };
   });
 </script>
 
@@ -68,12 +89,41 @@
       
       <!-- Mobile menu button -->
       <div class="md:hidden">
-        <button class="text-gray-300 hover:text-white focus:outline-none">
-          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+        <button 
+          on:click={toggleMobileMenu}
+          class="text-gray-300 hover:text-white focus:outline-none p-2 rounded-md"
+          aria-label="Toggle mobile menu"
+          aria-expanded={mobileMenuOpen}
+        >
+          {#if mobileMenuOpen}
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          {:else}
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          {/if}
         </button>
       </div>
     </div>
   </div>
+  
+  <!-- Mobile menu overlay -->
+  {#if mobileMenuOpen}
+    <div class="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" on:click={closeMobileMenu} on:keydown={(e) => e.key === 'Escape' && closeMobileMenu()} role="button" tabindex="-1" aria-label="Close mobile menu">
+      <div class="fixed top-16 left-0 right-0 bg-gray-900 border-t border-gray-700 shadow-lg">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+          {#each sections as section}
+            <button
+              on:click={() => scrollToSection(section.id)}
+              class="block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors {activeSection === section.id ? 'text-gradient-gold bg-gray-800' : 'text-gray-300 hover:text-white hover:bg-gray-800'}"
+            >
+              {section.label}
+            </button>
+          {/each}
+        </div>
+      </div>
+    </div>
+  {/if}
 </nav>

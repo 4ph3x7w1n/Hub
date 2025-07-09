@@ -3,15 +3,132 @@
   import KPICard from '$lib/components/KPICard.svelte';
   import FeatureBadge from '$lib/components/FeatureBadge.svelte';
   import PostmortemCard from '$lib/components/PostmortemCard.svelte';
+  import PostmortemFilter from '$lib/components/PostmortemFilter.svelte';
   import Chart from '$lib/components/Chart.svelte';
+  import ContactForm from '$lib/components/ContactForm.svelte';
+  import ContentManager from '$lib/components/ContentManager.svelte';
   import { kpiData, chartData, features, postmortemData, capabilities, teamStats } from '$lib/data/mockData';
+  import { contentStore } from '$lib/stores/content';
   import { onMount } from 'svelte';
   
   let scrollY = 0;
+  let dynamicKpiData = kpiData;
+  let dynamicTeamStats = teamStats;
+  
+  // Postmortem filtering
+  let filteredPostmortems = postmortemData;
+  let searchTerm = '';
+  let filterCriteria = {
+    searchTerm: '',
+    selectedSeverity: 'all',
+    selectedTimeframe: 'all',
+    sortBy: 'date',
+    sortOrder: 'desc'
+  };
+  
+  // Subscribe to content store
+  contentStore.subscribe(content => {
+    dynamicKpiData = content.kpiData as any;
+    dynamicTeamStats = content.teamStats;
+  });
+  
+  function handlePostmortemFilter(event: CustomEvent) {
+    filterCriteria = event.detail;
+    searchTerm = filterCriteria.searchTerm;
+    filteredPostmortems = filterPostmortems(postmortemData, filterCriteria);
+  }
+  
+  function filterPostmortems(data: typeof postmortemData, criteria: typeof filterCriteria) {
+    let filtered = [...data];
+    
+    // Filter by search term
+    if (criteria.searchTerm) {
+      const term = criteria.searchTerm.toLowerCase();
+      filtered = filtered.filter(incident => 
+        incident.title.toLowerCase().includes(term) ||
+        incident.impact.toLowerCase().includes(term) ||
+        incident.summary.toLowerCase().includes(term) ||
+        incident.rootCause.toLowerCase().includes(term) ||
+        incident.affectedSystems.some(system => system.toLowerCase().includes(term))
+      );
+    }
+    
+    // Filter by severity
+    if (criteria.selectedSeverity !== 'all') {
+      filtered = filtered.filter(incident => incident.severity === criteria.selectedSeverity);
+    }
+    
+    // Filter by timeframe
+    if (criteria.selectedTimeframe !== 'all') {
+      const now = new Date();
+      const cutoffDate = new Date();
+      
+      switch (criteria.selectedTimeframe) {
+        case '7d':
+          cutoffDate.setDate(now.getDate() - 7);
+          break;
+        case '30d':
+          cutoffDate.setDate(now.getDate() - 30);
+          break;
+        case '90d':
+          cutoffDate.setDate(now.getDate() - 90);
+          break;
+        case '1y':
+          cutoffDate.setFullYear(now.getFullYear() - 1);
+          break;
+      }
+      
+      filtered = filtered.filter(incident => new Date(incident.date) >= cutoffDate);
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (criteria.sortBy) {
+        case 'date':
+          aValue = new Date(a.date);
+          bValue = new Date(b.date);
+          break;
+        case 'severity':
+          const severityOrder = { low: 0, medium: 1, high: 2, critical: 3 };
+          aValue = severityOrder[a.severity];
+          bValue = severityOrder[b.severity];
+          break;
+        case 'duration':
+          aValue = parseDuration(a.duration);
+          bValue = parseDuration(b.duration);
+          break;
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (criteria.sortOrder === 'desc') {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      } else {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      }
+    });
+    
+    return filtered;
+  }
+  
+  function parseDuration(duration: string): number {
+    const match = duration.match(/(\d+)h?\s*(\d+)?m?/);
+    if (!match) return 0;
+    const hours = parseInt(match[1]) || 0;
+    const minutes = parseInt(match[2]) || 0;
+    return hours * 60 + minutes;
+  }
   
   onMount(() => {
     const handleScroll = () => scrollY = window.scrollY;
     window.addEventListener('scroll', handleScroll);
+    contentStore.load(); // Load saved content
     return () => window.removeEventListener('scroll', handleScroll);
   });
 </script>
@@ -55,22 +172,22 @@
     <div class="card text-center">
       <div class="text-3xl mb-4">👥</div>
       <h3 class="text-xl font-semibold mb-2">Team Size</h3>
-      <p class="text-gray-400">{teamStats.size}</p>
+      <p class="text-gray-400">{dynamicTeamStats.size}</p>
     </div>
     <div class="card text-center">
       <div class="text-3xl mb-4">⏰</div>
       <h3 class="text-xl font-semibold mb-2">Coverage</h3>
-      <p class="text-gray-400">{teamStats.coverage}</p>
+      <p class="text-gray-400">{dynamicTeamStats.coverage}</p>
     </div>
     <div class="card text-center">
       <div class="text-3xl mb-4">🌍</div>
       <h3 class="text-xl font-semibold mb-2">Global Reach</h3>
-      <p class="text-gray-400">{teamStats.regions.length} Regions</p>
+      <p class="text-gray-400">{dynamicTeamStats.regions.length} Regions</p>
     </div>
     <div class="card text-center">
       <div class="text-3xl mb-4">🔧</div>
       <h3 class="text-xl font-semibold mb-2">Specialties</h3>
-      <p class="text-gray-400">{teamStats.specialties.length} Areas</p>
+      <p class="text-gray-400">{dynamicTeamStats.specialties.length} Areas</p>
     </div>
   </div>
 </section>
@@ -112,46 +229,46 @@
   <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12">
     <KPICard 
       title="MTTA" 
-      value={kpiData.mtta.value}
-      subtitle={kpiData.mtta.subtitle}
-      trend={kpiData.mtta.trend}
-      trendValue={kpiData.mtta.trendValue}
+      value={dynamicKpiData.mtta.value}
+      subtitle={dynamicKpiData.mtta.subtitle}
+      trend={dynamicKpiData.mtta.trend}
+      trendValue={dynamicKpiData.mtta.trendValue}
       icon="⚡"
       gradient="primary"
     />
     <KPICard 
       title="MTTR" 
-      value={kpiData.mttr.value}
-      subtitle={kpiData.mttr.subtitle}
-      trend={kpiData.mttr.trend}
-      trendValue={kpiData.mttr.trendValue}
+      value={dynamicKpiData.mttr.value}
+      subtitle={dynamicKpiData.mttr.subtitle}
+      trend={dynamicKpiData.mttr.trend}
+      trendValue={dynamicKpiData.mttr.trendValue}
       icon="🔧"
       gradient="secondary"
     />
     <KPICard 
       title="Incidents" 
-      value={kpiData.incidentCount.value}
-      subtitle={kpiData.incidentCount.subtitle}
-      trend={kpiData.incidentCount.trend}
-      trendValue={kpiData.incidentCount.trendValue}
+      value={dynamicKpiData.incidentCount.value}
+      subtitle={dynamicKpiData.incidentCount.subtitle}
+      trend={dynamicKpiData.incidentCount.trend}
+      trendValue={dynamicKpiData.incidentCount.trendValue}
       icon="📊"
       gradient="tertiary"
     />
     <KPICard 
       title="Coverage" 
-      value={kpiData.coverage.value}
-      subtitle={kpiData.coverage.subtitle}
-      trend={kpiData.coverage.trend}
-      trendValue={kpiData.coverage.trendValue}
+      value={dynamicKpiData.coverage.value}
+      subtitle={dynamicKpiData.coverage.subtitle}
+      trend={dynamicKpiData.coverage.trend}
+      trendValue={dynamicKpiData.coverage.trendValue}
       icon="🌍"
       gradient="primary"
     />
     <KPICard 
       title="Uptime" 
-      value={kpiData.uptime.value}
-      subtitle={kpiData.uptime.subtitle}
-      trend={kpiData.uptime.trend}
-      trendValue={kpiData.uptime.trendValue}
+      value={dynamicKpiData.uptime.value}
+      subtitle={dynamicKpiData.uptime.subtitle}
+      trend={dynamicKpiData.uptime.trend}
+      trendValue={dynamicKpiData.uptime.trendValue}
       icon="✅"
       gradient="secondary"
     />
@@ -161,11 +278,25 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="card">
       <h3 class="text-xl font-semibold mb-4 text-white">Incident Trends</h3>
-      <Chart type="line" data={chartData.incidentTrend} height={300} />
+      <Chart 
+        type="line" 
+        data={chartData.incidentTrend} 
+        height={300} 
+        title="Incident Trends"
+        showFilters={true}
+        filterable={true}
+      />
     </div>
     <div class="card">
       <h3 class="text-xl font-semibold mb-4 text-white">Proactive vs Reactive</h3>
-      <Chart type="doughnut" data={chartData.proactiveVsReactive} height={300} />
+      <Chart 
+        type="doughnut" 
+        data={chartData.proactiveVsReactive} 
+        height={300} 
+        title="Proactive vs Reactive Response"
+        showFilters={true}
+        filterable={true}
+      />
     </div>
   </div>
 </section>
@@ -201,10 +332,19 @@
     </p>
   </div>
   
+  <PostmortemFilter on:filter={handlePostmortemFilter} />
+  
   <div class="space-y-6">
-    {#each postmortemData as incident}
-      <PostmortemCard {incident} />
-    {/each}
+    {#if filteredPostmortems.length > 0}
+      {#each filteredPostmortems as incident}
+        <PostmortemCard {incident} {searchTerm} />
+      {/each}
+    {:else}
+      <div class="text-center py-12">
+        <div class="text-gray-400 text-lg mb-4">No postmortems found</div>
+        <p class="text-gray-500">Try adjusting your search criteria or filters</p>
+      </div>
+    {/if}
   </div>
 </section>
 
@@ -218,24 +358,24 @@
   </div>
   
   <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-    <div class="card text-center">
-      <div class="text-4xl mb-4">💬</div>
-      <h3 class="text-xl font-semibold mb-2 text-white">Slack</h3>
-      <p class="text-gray-400 mb-4">Join our incident response channel</p>
-      <button class="btn-primary">#byte-incidents</button>
-    </div>
-    <div class="card text-center">
-      <div class="text-4xl mb-4">📧</div>
-      <h3 class="text-xl font-semibold mb-2 text-white">Email</h3>
-      <p class="text-gray-400 mb-4">Direct email for urgent matters</p>
-      <button class="btn-secondary">byteincidentmanagement@yum.com</button>
-    </div>
-    <div class="card text-center">
-      <div class="text-4xl mb-4">🚨</div>
-      <h3 class="text-xl font-semibold mb-2 text-white">Escalation</h3>
-      <p class="text-gray-400 mb-4">Emergency escalation form</p>
-      <button class="btn-primary">Escalation Form</button>
-    </div>
+    <ContactForm 
+      title="Slack"
+      description="Join our incident response channel"
+      icon="💬"
+      type="slack"
+    />
+    <ContactForm 
+      title="Email"
+      description="Direct email for urgent matters"
+      icon="📧"
+      type="email"
+    />
+    <ContactForm 
+      title="Escalation"
+      description="Emergency escalation form"
+      icon="🚨"
+      type="escalation"
+    />
   </div>
 </section>
 
@@ -243,11 +383,14 @@
 <footer class="bg-gray-900 border-t border-gray-700 py-8">
   <div class="max-w-7xl mx-auto px-4 text-center">
     <div class="flex justify-center space-x-8 mb-4">
-      <a href="#" class="text-gray-400 hover:text-white transition-colors">Documentation</a>
-      <a href="#" class="text-gray-400 hover:text-white transition-colors">SLA</a>
-      <a href="#" class="text-gray-400 hover:text-white transition-colors">OLA</a>
-      <a href="#" class="text-gray-400 hover:text-white transition-colors">Runbooks</a>
+      <a href="/docs" class="text-gray-400 hover:text-white transition-colors">Documentation</a>
+      <a href="/sla" class="text-gray-400 hover:text-white transition-colors">SLA</a>
+      <a href="/ola" class="text-gray-400 hover:text-white transition-colors">OLA</a>
+      <a href="/runbooks" class="text-gray-400 hover:text-white transition-colors">Runbooks</a>
     </div>
     <p class="text-gray-400">© 2024 Byte Incident Management Team. All rights reserved.</p>
   </div>
 </footer>
+
+<!-- Content Manager -->
+<ContentManager />
