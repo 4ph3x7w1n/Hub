@@ -54,8 +54,8 @@
     }
   }
   
-  function updateKPI(key: keyof import('$lib/stores/content').KPIData, field: string, value: string) {
-    contentStore.updateKPI(key, { [field]: value } as any);
+  function updateKPI(key: string, field: string, value: string) {
+    contentStore.updateKPI(key as any, { [field]: value } as any);
     hasChanges = true;
   }
   
