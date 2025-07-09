@@ -215,8 +215,9 @@
                 <h4 class="font-medium text-white mb-3 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Value</label>
+                    <label class="block text-sm font-medium text-gray-300 mb-1" for="kpi-{key}-value">Value</label>
                     <input
+                      id="kpi-{key}-value"
                       type="text"
                       value={kpi.value}
                       disabled={!isEditing}
@@ -225,8 +226,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Trend Value</label>
+                    <label class="block text-sm font-medium text-gray-300 mb-1" for="kpi-{key}-trend-value">Trend Value</label>
                     <input
+                      id="kpi-{key}-trend-value"
                       type="text"
                       value={kpi.trendValue}
                       disabled={!isEditing}
@@ -235,8 +237,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Trend</label>
+                    <label class="block text-sm font-medium text-gray-300 mb-1" for="kpi-{key}-trend">Trend</label>
                     <select
+                      id="kpi-{key}-trend"
                       value={kpi.trend}
                       disabled={!isEditing}
                       on:change={(e) => updateKPI(key, 'trend', (e.target as HTMLSelectElement).value)}
@@ -248,8 +251,9 @@
                     </select>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Subtitle</label>
+                    <label class="block text-sm font-medium text-gray-300 mb-1" for="kpi-{key}-subtitle">Subtitle</label>
                     <input
+                      id="kpi-{key}-subtitle"
                       type="text"
                       value={kpi.subtitle}
                       disabled={!isEditing}
@@ -268,8 +272,9 @@
             <div class="bg-gray-700 rounded-lg p-4">
               <div class="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-1">Team Size</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1" for="team-size">Team Size</label>
                   <input
+                    id="team-size"
                     type="text"
                     value={currentContent.teamStats.size}
                     disabled={!isEditing}
@@ -278,8 +283,9 @@
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-1">Coverage</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1" for="team-coverage">Coverage</label>
                   <input
+                    id="team-coverage"
                     type="text"
                     value={currentContent.teamStats.coverage}
                     disabled={!isEditing}
@@ -291,7 +297,7 @@
               
               <div class="mb-4">
                 <div class="flex justify-between items-center mb-2">
-                  <label class="text-sm font-medium text-gray-300">Regions</label>
+                  <span class="text-sm font-medium text-gray-300">Regions</span>
                   {#if isEditing}
                     <button on:click={addRegion} class="text-blue-400 hover:text-blue-300 text-sm">+ Add Region</button>
                   {/if}
@@ -301,7 +307,7 @@
                     <div class="flex items-center bg-gray-600 rounded px-3 py-1">
                       <span class="text-white text-sm">{region}</span>
                       {#if isEditing}
-                        <button on:click={() => removeRegion(index)} class="ml-2 text-red-400 hover:text-red-300">
+                        <button on:click={() => removeRegion(index)} class="ml-2 text-red-400 hover:text-red-300" aria-label="Remove region {region}">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -314,7 +320,7 @@
               
               <div>
                 <div class="flex justify-between items-center mb-2">
-                  <label class="text-sm font-medium text-gray-300">Specialties</label>
+                  <span class="text-sm font-medium text-gray-300">Specialties</span>
                   {#if isEditing}
                     <button on:click={addSpecialty} class="text-blue-400 hover:text-blue-300 text-sm">+ Add Specialty</button>
                   {/if}
@@ -324,7 +330,7 @@
                     <div class="flex items-center bg-gray-600 rounded px-3 py-1">
                       <span class="text-white text-sm">{specialty}</span>
                       {#if isEditing}
-                        <button on:click={() => removeSpecialty(index)} class="ml-2 text-red-400 hover:text-red-300">
+                        <button on:click={() => removeSpecialty(index)} class="ml-2 text-red-400 hover:text-red-300" aria-label="Remove specialty {specialty}">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                           </svg>

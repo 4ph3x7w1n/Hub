@@ -228,9 +228,9 @@
 
 {#if isFullscreen}
   <div class="fullscreen-overlay" on:click={toggleFullscreen} on:keydown={(e) => e.key === 'Escape' && toggleFullscreen()} role="button" tabindex="0" aria-label="Close fullscreen">
-    <div class="fullscreen-content" on:click|stopPropagation>
+    <div class="fullscreen-content" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && toggleFullscreen()} role="dialog" tabindex="-1" aria-labelledby="fullscreen-title">
       <div class="fullscreen-header">
-        <h3 class="text-xl font-semibold text-white">{title}</h3>
+        <h3 id="fullscreen-title" class="text-xl font-semibold text-white">{title}</h3>
         <button on:click={toggleFullscreen} class="control-btn" aria-label="Close fullscreen">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
