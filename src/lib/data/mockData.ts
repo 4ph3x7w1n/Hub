@@ -91,31 +91,45 @@ export const chartData = {
 
 export const features = [
   {
-    title: '24/7 On-Call',
-    description: 'Round-the-clock monitoring and incident response',
-    icon: '🚨',
+    title: 'POS System Management',
+    description: 'Point-of-sale infrastructure monitoring with real-time transaction health and payment processing oversight',
+    icon: '🏪',
     variant: 'primary' as const,
     active: true
   },
   {
-    title: 'Global Infrastructure',
-    description: 'Worldwide coverage across all regions',
-    icon: '🌍',
+    title: 'Commerce Platform',
+    description: 'E-commerce system reliability with order processing, inventory sync, and customer experience monitoring',
+    icon: '🛒',
     variant: 'secondary' as const,
     active: true
   },
   {
-    title: 'Real-Time Alerts',
-    description: 'Instant notifications for critical events',
-    icon: '⚡',
+    title: 'Connect Integration',
+    description: 'API gateway and integration monitoring ensuring seamless connectivity between all platform components',
+    icon: '🔗',
     variant: 'warning' as const,
     active: true
   },
   {
-    title: 'RCA Ownership',
-    description: 'Complete root cause analysis management',
-    icon: '🔍',
+    title: 'Inventory Systems',
+    description: 'Real-time inventory tracking with automated alerts for stock levels, sync failures, and warehouse operations',
+    icon: '📦',
     variant: 'success' as const,
+    active: true
+  },
+  {
+    title: 'Coach Analytics',
+    description: 'Performance coaching platform monitoring with user engagement metrics and training system health',
+    icon: '📊',
+    variant: 'primary' as const,
+    active: true
+  },
+  {
+    title: 'Portal Management',
+    description: 'Customer and admin portal oversight with authentication, user experience, and access control monitoring',
+    icon: '🏛️',
+    variant: 'secondary' as const,
     active: true
   }
 ];

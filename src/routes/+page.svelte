@@ -304,13 +304,13 @@
 <!-- Features Showcase -->
 <section id="features" class="section bg-gray-800">
   <div class="text-center mb-12">
-    <h2 class="text-4xl font-bold gradient-text mb-4">Key Features</h2>
+    <h2 class="text-4xl font-bold gradient-text mb-4">Product Ecosystem</h2>
     <p class="text-xl text-gray-300 max-w-3xl mx-auto">
-      Advanced capabilities that ensure comprehensive incident management and system reliability.
+      Comprehensive monitoring and management across all platform components and services.
     </p>
   </div>
   
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {#each features as feature}
       <FeatureBadge 
         title={feature.title}
